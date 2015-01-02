@@ -7,6 +7,13 @@
 #ifndef IMPORTER_DBCONNECTION_HPP
 #define IMPORTER_DBCONNECTION_HPP
 
+#include <libpq-fe.h>
+#include <fstream>
+#include <stdexcept>
+#include <sstream>
+
+#include <boost/algorithm/string/replace.hpp>
+
 #include "dbconn.hpp"
 
 /**
@@ -25,6 +32,13 @@ public:
      */
     ~DbCopyConn() {
         DbConn::close();
+    }
+
+    static std::string escape_string(const std::string &string) {
+        std::string copy = string;
+        boost::replace_all(copy, "\\", "\\\\");
+        boost::replace_all(copy, "\t", "\\t");
+        return copy;
     }
 
     /**

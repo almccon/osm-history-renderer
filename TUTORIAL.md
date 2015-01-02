@@ -49,7 +49,7 @@ Second you'll need osmium:
     cd osmium
     make doc
     sudo make install
-    cd ../..
+    cd ..
 
 Next, get and build the splitter:
 
@@ -70,11 +70,11 @@ Next one will be the importer and renderer:
 Congratulations. You're now equipped with everything you need.
 
 ## cutting your area
- Most people will want to create their own extract before rendering, so we'll cover this step here, too. First, go to the [hosted extracts](http://osm.personalwerk.de/history-extracts/) and find the extract that fits your desired area best. In this example we'll render the city of Karlsruhe, so we'll download the germany extract. If you can't find a matching extract, download the [full-planet-full-history pbf](http://osm.personalwerk.de/full-experimental-pbf/).
+ Most people will want to create their own extract before rendering, so we'll cover this step here, too. First, go to the [hosted extracts](http://osm.personalwerk.de/full-history-extracts/) and find the extract that fits your desired area best. In this example we'll render the city of Karlsruhe, so we'll download the germany extract. If you can't find a matching extract, download the [full-planet-full-history pbf](http://planet.osm.org/planet/experimental/?C=N;O=A).
  
     mkdir osm-data
     cd osm-data
-    wget http://osm.personalwerk.de/full-history-extracts/history_2012-10-13_13:35/europe/germany.osh.pbf
+    wget http://osm.personalwerk.de/full-history-extracts/latest/europe/germany.osh.pbf
 
 next we'll create a splitter-config-file. Create a file named "splitter.config" which contains a single line:
 
@@ -164,12 +164,31 @@ The script will calculate the first time a node was placed in that area and rend
 to see the help information explaining various parameters and possibilities.
 
 ## example rendering
-
 [this example](http://mazdermind.github.com/osm-history-renderer/karlsruhe.html) example was created using that command-line:
 
      ./osm-history-renderer/renderer/render-animation.py --style ~/osm-mapnik-style/osm-mapnik2.xml \
-         --bbox 8.3122,48.9731,8.5139,49.0744 --anistart=2006-09-01 --type html --file karlsruhe \
+         --bbox 8.3122,48.9731,8.5139,49.0744 --anistart=2006-09-01 --file karlsruhe \
          --label "%d.%m.%Y" --label-gravity SouthEast
+
+## manual database queries (for statistics and such)
+The [render.py-script](https://github.com/MaZderMind/osm-history-renderer/blob/master/renderer/render.py#L242) creates Database-Views for each slice of time it renders. The View presents to the user (or programm) an osm2pgsql-compatible database layout of osm-objects as they were at thet point in time. You can do this, too, and you can use these views to to statistics and such. The Script generates its views like this:
+
+     CREATE OR REPLACE VIEW timeslice_point AS SELECT id AS osm_id, tags->'name' AS name, tags->'amenity' AS amenity,
+        geom AS way FROM hist_point WHERE '2000-01-01' BETWEEN valid_from AND COALESCE(valid_to, '9999-12-31');
+     
+     CREATE OR REPLACE VIEW timeslice_line AS SELECT id AS osm_id, tags->'name' AS name, tags->'amenity' AS amenity,
+        geom AS way FROM hist_line WHERE '2000-01-01' BETWEEN valid_from AND COALESCE(valid_to, '9999-12-31');
+     
+     CREATE OR REPLACE VIEW timeslice_polygon AS SELECT id AS osm_id, tags->'name' AS name, tags->'amenity' AS amenity,
+        geom AS way FROM hist_polygon WHERE '2000-01-01' BETWEEN valid_from AND COALESCE(valid_to, '9999-12-31');
+
+These Queries generate three views which represent the state of the osm-database (not considering objects removed or changed because of the licence-change) as it was on 2000-01-01. Of couse you can add more tagsas columns to be pulled out of the tags-hstore.
+
+## generating video-sequences
+If you require a video-file, for example to upload it to youtube, you can use ffmpeg to generate an animation from the png-sequence that ```render-animation.py``` generates for you. A good tool for that is [ffmpeg](http://www.ffmpeg.org/). Some example code that could get you started follows, but I'm no specialist in video encoding, so you might [have to google](https://www.google.de/search?q=ffmpeg+from+png+files) for other resources.
+
+     ffmpeg -r 10 -f image2 -i animap/%010d.png -crf 0 lossless-h264.mp4
+
 
 ## like it?
 If you'd like to support this project, Flatter it:
@@ -179,3 +198,4 @@ If you'd like to support this project, Flatter it:
 ## system requirements
 This tutorial was tested on a Debian 6.0.3 i386 box with 1 GB of RAM and a single Core. Rendering was not really fast but it worked.
 Most memory was used while splitting the germany.osh.pbf. It did fill up the whole RAM plus 1/2 of the SWAP but it ran pretty smoothly.
+Take a look at the [Wiki-Page](https://wiki.openstreetmap.org/wiki/OSM_History_Renderer) for some notes about memory usage of different imports.
